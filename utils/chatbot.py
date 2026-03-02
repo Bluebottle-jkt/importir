@@ -102,19 +102,44 @@ _SYS = """\
 Kamu adalah asisten analitik untuk Tim Compliance Risk Management (SR15) \
 Direktorat Jenderal Pajak Indonesia.
 
-Tugasmu: membantu menganalisis data Pemberitahuan Impor Barang (PIB) \
-berdasarkan HS Code, KLU, dan KPP.
+Aplikasi ini adalah dashboard analitik SR15 untuk data impor (PIB × HS Code × KLU). \
+User dapat meminta: analisis naratif, rekomendasi risiko, maupun aksi operasional UI \
+(filter klaster, set threshold pareto, generate populasi, export data).
 
 Konteks dataset saat ini (anonim — TANPA NPWP individual):
 {context}
 
 Panduan:
 - Jawab pertanyaan bebas tentang pola risiko, tren, distribusi, regulasi pajak impor.
-- Jangan menyebutkan atau membuat-buat NPWP atau identitas wajib pajak.
+- Jangan menyebutkan atau membuat-buat NPWP atau identitas wajib pajak individual.
 - Fokus: mismatch PPH/PPN, dispersi KLU, konsentrasi importir, potensi API-P Abuse.
 - Jawab dalam Bahasa Indonesia kecuali pengguna menggunakan Bahasa Inggris.
 - Berikan jawaban yang ringkas, informatif, dan langsung ke inti pertanyaan.
 - Kamu bisa menjawab pertanyaan umum tentang perpajakan impor, HS Code, dan analitik risiko.
+
+AKSI OPERASIONAL:
+Jika user meminta aksi yang bisa dilakukan di UI (filter klaster, set pareto, export), \
+WAJIB sertakan blok JSON berikut SETELAH penjelasan naratif:
+
+```json
+{{
+  "type": "COMMAND",
+  "action": "set_filter|set_pareto|generate_pareto|export",
+  "params": {{
+    "cluster": ["Elektronik", "Otomotif"],
+    "pareto": 0.7,
+    "export_format": "csv",
+    "dedup_npwp": true
+  }},
+  "explanation": "Penjelasan singkat aksi untuk user."
+}}
+```
+
+Aturan COMMAND:
+- Hanya keluarkan COMMAND JSON bila user meminta aksi operasional secara eksplisit.
+- Jangan mengklaim sudah mengeksekusi aksi — hanya sarankan lewat JSON.
+- Jika bukan aksi operasional, jawab narasi biasa tanpa JSON.
+- Jangan pernah menyebut NPWP individual jika dataset adalah data agregat.
 """
 
 
@@ -301,27 +326,31 @@ def _pib_info(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-_HELP_TEXT = """**Pertanyaan / Perintah yang Didukung:**
+_HELP_TEXT = """**Contoh pertanyaan / perintah:**
 
-**Analisis Nilai:**
-- `top hs4` / `hs code terbesar` — top HS-4 berdasarkan PPN
-- `top kelompok` — top kelompok impor
-- `top klu` — top Klasifikasi Lapangan Usaha
-- `top kpp` — distribusi PPN per KPP
-- `top npwp ppn` / `top npwp pph` — top importir (data individu)
+Kamu bebas mengetik dalam bahasa natural — tidak terbatas pada daftar di bawah.
 
-**Risiko & Kepatuhan:**
-- `mismatch` / `rasio rendah` / `api-p` — HS4 dengan PPH/PPN rendah
-- `risiko` / `potensi` — identifikasi potensi ketidakpatuhan
+**Analisis & Eksplorasi:**
+- *"HS4 apa yang dominan di klaster elektronik?"*
+- *"Bandingkan tahun dan jelaskan tren PPN"*
+- *"Jelaskan mismatch PPH/PPN yang paling mencolok"*
+- *"Apa pola risiko utama di data ini?"*
+- *"Sektor mana yang memiliki konsentrasi importir paling tinggi?"*
 
-**Tren & Ringkasan:**
+**Perintah Operasional UI:**
+- *"Filter klaster otomotif lalu set pareto 70%"*
+- *"Export populasi pareto ke CSV"*
+- *"Set threshold pareto ke 60% dan generate"*
+- *"Tampilkan top HS4 klaster kimia/farmasi"*
+
+**Analisis Cepat:**
+- `top hs4` — top HS-4 berdasarkan PPN
+- `mismatch` / `api-p` — HS4 dengan PPH/PPN rendah
+- `summary` / `ringkasan` — ringkasan dataset
 - `bandingkan tahun` / `tren` — perbandingan antar periode
-- `summary` / `ringkasan` / `total` — ringkasan dataset
-- `pib` / `dokumen` — informasi jumlah PIB
+- `top klu` / `top kelompok` — distribusi per sektor
 
-**Pertanyaan Bebas:** ketik pertanyaan dalam bahasa alami (mis: "HS code apa yang paling banyak mismatch?")
-
-> Untuk analisis mendalam dengan Claude AI, gunakan halaman **/chatbot**"""
+> Claude AI aktif — tanya bebas, termasuk pertanyaan regulasi dan rekomendasi audit."""
 
 
 class RuleBasedChatbot(ChatbotInterface):
@@ -429,7 +458,15 @@ class RuleBasedChatbot(ChatbotInterface):
                 return _top_group(df, "NM_KELOMPOK", "Kelompok")
             return _summary(df)
 
+        # Try Claude AI before giving up
+        ctx      = build_context(df)
+        ai_reply = call_claude([{"role": "user", "content": message}], ctx)
+        if ai_reply:
+            return ai_reply
+
+        # Soft fallback — no raw help-text dump
         return (
-            f"_Pertanyaan tidak dikenali: **{message[:60]}**_\n\n"
-            + _HELP_TEXT
+            f"_Pertanyaan '{message[:60]}' tidak langsung dikenali. "
+            "Coba tanyakan tentang: **top hs4**, **mismatch**, **summary**, **tren**, "
+            "atau ketik pertanyaan bebas — Claude AI akan menjawab bila API key tersedia._"
         )

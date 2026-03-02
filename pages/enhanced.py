@@ -11,6 +11,7 @@ Changes from v1.0.0:
 
 from __future__ import annotations
 
+import io
 import json
 
 import dash_cytoscape as cyto
@@ -31,6 +32,45 @@ from utils.chatbot import (
 )
 
 cyto.load_extra_layouts()
+
+# ── HS Cluster utilities ───────────────────────────────────────────────────────
+
+_CLUSTER_MAP: dict[str, str] = {
+    **{str(c).zfill(2): "Kimia/Farmasi" for c in range(28, 39)},
+    **{str(c).zfill(2): "Pangan"        for c in range(10, 12)},
+    "85": "Elektronik",
+    "87": "Otomotif",
+}
+
+
+def normalize_hs(x) -> str:
+    return "".join(c for c in str(x) if c.isdigit())
+
+
+def get_chapter(x) -> str:
+    d = normalize_hs(x)
+    return d[:2].zfill(2) if len(d) >= 2 else ""
+
+
+def map_cluster(chapter: str) -> str:
+    return _CLUSTER_MAP.get(chapter, "Lainnya")
+
+
+def hs4_to_cluster(hs4) -> str:
+    return map_cluster(get_chapter(str(hs4)))
+
+
+def _apply_cluster_filter(df: pd.DataFrame, clusters: list) -> pd.DataFrame:
+    if not clusters or df.empty:
+        return df
+    # Fast path: use pre-computed Cluster column from load_raw()
+    if "Cluster" in df.columns:
+        return df[df["Cluster"].isin(clusters)]
+    # Fallback: derive on-the-fly from HS4 (e.g. manually constructed df)
+    if "HS4" not in df.columns:
+        return df
+    return df[df["HS4"].apply(hs4_to_cluster).isin(clusters)]
+
 
 # ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -217,6 +257,19 @@ _sidebar = html.Div([
         placeholder="Pilih KPP...", style=DD_STYLE),
 
     html.Hr(style={"borderColor":CLR["border"],"margin":"14px 0 6px"}),
+    sec_hdr("Filter Klaster"),
+
+    lbl("Klaster HS"),
+    dcc.Dropdown(id="en-dd-cluster", multi=True, clearable=True,
+        options=[
+            {"label": "Elektronik (Ch. 85)",      "value": "Elektronik"},
+            {"label": "Otomotif (Ch. 87)",         "value": "Otomotif"},
+            {"label": "Kimia/Farmasi (Ch. 28-38)", "value": "Kimia/Farmasi"},
+            {"label": "Pangan (Ch. 10-11)",        "value": "Pangan"},
+        ],
+        placeholder="Semua klaster...", style=DD_STYLE),
+
+    html.Hr(style={"borderColor":CLR["border"],"margin":"14px 0 6px"}),
     sec_hdr("Tampilan"),
 
     lbl("Kelompokkan berdasarkan"),
@@ -237,6 +290,45 @@ _sidebar = html.Div([
         style={"backgroundColor":CLR["danger"],"color":"#fff","border":"none",
                "borderRadius":"6px","padding":"8px 14px","cursor":"pointer",
                "width":"100%","fontSize":"12px","fontWeight":"600"}),
+
+    html.Hr(style={"borderColor":CLR["border"],"margin":"14px 0 6px"}),
+    sec_hdr("Pareto HS4"),
+
+    lbl("Threshold Pareto (%)"),
+    html.Div(dcc.Slider(id="en-sl-pareto", min=50, max=100, step=5, value=80,
+        marks={50:"50%",60:"60%",70:"70%",80:"80%",90:"90%",100:"100%"},
+        updatemode="mouseup",
+        tooltip={"placement":"bottom","always_visible":False}), style=SL_STYLE),
+
+    dcc.Checklist(id="en-chk-dedup",
+        options=[{"label":" Deduplikasi NPWP","value":"dedup"}],
+        value=["dedup"],
+        style={"color":CLR["muted"],"fontSize":"11px","marginBottom":"8px"}),
+
+    html.Button("▶ Generate Populasi Pareto", id="en-btn-pareto",
+        style={"backgroundColor":CLR["success"],"color":"#fff","border":"none",
+               "borderRadius":"6px","padding":"8px 14px","cursor":"pointer",
+               "width":"100%","fontSize":"12px","fontWeight":"600","marginBottom":"6px"}),
+
+    html.Button("↓ NPWP Pareto (.csv)", id="en-btn-dl-npwp",
+        disabled=True,
+        style={"backgroundColor":CLR["surface"],"color":CLR["accent"],
+               "border":f"1px solid {CLR['accent']}44","borderRadius":"6px",
+               "padding":"6px 14px","cursor":"pointer","width":"100%",
+               "fontSize":"11px","marginBottom":"6px"}),
+
+    dcc.Loading(id="en-pareto-loading", type="dot", color=CLR["accent"],
+        children=html.Div([
+            html.Div(id="en-pareto-status",
+                children="Klik ▶ Generate untuk mulai.",
+                style={"fontSize":"11px","color":CLR["muted"],
+                       "padding":"7px 10px","marginTop":"2px","marginBottom":"4px",
+                       "border":f"1px solid {CLR['border']}",
+                       "borderRadius":"6px","lineHeight":"1.4"}),
+            html.Div(id="en-pareto-metrics",
+                style={"fontSize":"10px","color":CLR["muted"],
+                       "lineHeight":"1.7","marginBottom":"6px","paddingLeft":"2px"}),
+        ])),
 
     html.Hr(style={"borderColor":CLR["border"],"margin":"14px 0 6px"}),
     html.Div(id="en-filter-chips",
@@ -264,6 +356,8 @@ def layout():
 
     return html.Div([
         dcc.Store(id="en-store-state"),
+        dcc.Store(id="en-store-pareto", data=None),
+        dcc.Download(id="en-download-npwp"),
 
         html.Div([
             _sidebar,
@@ -275,6 +369,10 @@ def layout():
                     type="circle", color=CLR["accent"],
                     style={"minHeight":"72px"},
                 ),
+                html.Div(id="en-pareto-summary", style={
+                    "display":"flex","gap":"10px","flexWrap":"wrap",
+                    "padding":"6px 18px","borderBottom":f"1px solid {CLR['border']}",
+                    "backgroundColor":CLR["card"]+"44","minHeight":"0"}),
                 dcc.Tabs(id="en-tabs", value="tab-en-overview",
                     style={"backgroundColor":CLR["card"],"borderBottom":f"1px solid {CLR['border']}"},
                     colors={"border":CLR["border"],"primary":CLR["accent"],"background":CLR["card"]},
@@ -385,29 +483,31 @@ def _nm_kelompok_opts(search_val, years):
     Output("en-dd-kddet",       "value"),
     Output("en-dd-subgol",      "value"),
     Output("en-dd-kpp",         "value"),
+    Output("en-dd-cluster",     "value"),
     Input("en-btn-reset", "n_clicks"),
     prevent_initial_call=True,
 )
 def _reset(_):
-    return [0, 5000], [0, 10000], [], [], [], [], [], []
+    return [0, 5000], [0, 10000], [], [], [], [], [], [], []
 
 
 # ── Store + KPIs + chips + stats ──────────────────────────────────────────────
 
 def _build_state(years, pph_range, ppn_range, nm_klu, nm_kelompok,
-                 kd_kel, kd_det, nm_sub, kpp) -> dict:
+                 kd_kel, kd_det, nm_sub, kpp, cluster=None) -> dict:
     return {
-        "years":       years or YEARS,
-        "pph_range":   [(pph_range[0] or 0)*1e6, (pph_range[1] or 5000)*1e6]
-                       if pph_range else [0, 5e9],
-        "ppn_range":   [(ppn_range[0] or 0)*1e6, (ppn_range[1] or 10000)*1e6]
-                       if ppn_range else [0, 1e10],
-        "nm_klu":      nm_klu      or [],
-        "nm_kelompok": nm_kelompok or [],
-        "kd_kelompok": kd_kel  or [],
-        "kd_detil":    kd_det  or [],
-        "nm_subgol":   nm_sub  or [],
-        "kpp":         kpp     or [],
+        "years":          years or YEARS,
+        "pph_range":      [(pph_range[0] or 0)*1e6, (pph_range[1] or 5000)*1e6]
+                          if pph_range else [0, 5e9],
+        "ppn_range":      [(ppn_range[0] or 0)*1e6, (ppn_range[1] or 10000)*1e6]
+                          if ppn_range else [0, 1e10],
+        "nm_klu":         nm_klu      or [],
+        "nm_kelompok":    nm_kelompok or [],
+        "kd_kelompok":    kd_kel  or [],
+        "kd_detil":       kd_det  or [],
+        "nm_subgol":      nm_sub  or [],
+        "kpp":            kpp     or [],
+        "cluster_filter": cluster or [],
     }
 
 
@@ -425,13 +525,19 @@ def _build_state(years, pph_range, ppn_range, nm_klu, nm_kelompok,
     Input("en-dd-kddet",        "value"),
     Input("en-dd-subgol",       "value"),
     Input("en-dd-kpp",          "value"),
+    Input("en-dd-cluster",      "value"),
 )
 def _update_store(years, pph_range, ppn_range, nm_klu, nm_kelompok,
-                  kd_kel, kd_det, nm_sub, kpp):
+                  kd_kel, kd_det, nm_sub, kpp, cluster):
     state  = _build_state(years, pph_range, ppn_range,
-                          nm_klu, nm_kelompok, kd_kel, kd_det, nm_sub, kpp)
+                          nm_klu, nm_kelompok, kd_kel, kd_det, nm_sub, kpp, cluster)
     df_raw = load_multi(state["years"])
     df_f   = apply_filters_cached(df_raw, state)
+
+    # Apply cluster filter to KPI stats (same pipeline as _render_tab)
+    cluster_filter = state.get("cluster_filter", [])
+    if cluster_filter:
+        df_f = _apply_cluster_filter(df_f, cluster_filter)
 
     # Invalidate render cache for old states (keep cache small, ~4 recent states)
     state_json_new = json.dumps(state)
@@ -475,6 +581,8 @@ def _update_store(years, pph_range, ppn_range, nm_klu, nm_kelompok,
         chips.append(chip(f"SUBGOL: {len(nm_sub)}", CLR["purple"]))
     if kpp:
         chips.append(chip(f"KPP: {len(kpp)}", CLR["danger"]))
+    if cluster:
+        chips.append(chip(f"Klaster: {', '.join(cluster)}", CLR["purple"]))
     if ppn_range and (ppn_range[0] > 0 or ppn_range[1] < 10000):
         chips.append(chip(f"PPN: {ppn_range[0]}-{ppn_range[1]} Jt", CLR["success"]))
     if pph_range and (pph_range[0] > 0 or pph_range[1] < 5000):
@@ -522,6 +630,11 @@ def _render_tab(tab, state_json, group_col, topn):
         df_raw = load_multi(state["years"])
         df_f   = apply_filters_cached(df_raw, state)
 
+        # Apply cluster filter (derived from HS4 chapter — done after global filters)
+        cluster_filter = state.get("cluster_filter", [])
+        if cluster_filter:
+            df_f = _apply_cluster_filter(df_f, cluster_filter)
+
         if df_f.empty:
             result = html.Div("Tidak ada data setelah filter.",
                               style={"color":CLR["muted"],"padding":"40px","textAlign":"center"})
@@ -560,6 +673,10 @@ def _tab_overview(df, group_col, topn):
     gc = group_col if group_col in df.columns else "HS4"
     agg = agg_by_group_cached(df, gc, topn)
 
+    # Sort descending so largest is at index 0; yaxis autorange="reversed" puts it on top
+    if not agg.empty:
+        agg = agg.sort_values("PPN_DIBAYAR", ascending=False).reset_index(drop=True)
+
     # ── Build hover name lookup for the group column ──────────────────────────
     _NM_MAP = {          # group_col → which name column to look up
         "HS4":       "NM_KELOMPOK",
@@ -575,7 +692,12 @@ def _tab_overview(df, group_col, topn):
             nm_col = _NM_MAP[gc]
             # Use first() instead of mode() — 10x faster, good enough for labels
             nm_map = df.groupby(gc, observed=True)[nm_col].first()
-            hover_names = agg[gc].map(nm_map).fillna("").astype(str)
+            # nm_map values may be Categorical; .map() can preserve that dtype.
+            # Use pd.Series constructor to guarantee object dtype AFTER mapping,
+            # so .fillna("") never hits the "new category" restriction.
+            _mapped = agg[gc].map(nm_map)
+            hover_names = (pd.Series(_mapped.values, index=agg.index, dtype="object")
+                             .fillna("").astype(str))
 
     # ── Bar chart ─────────────────────────────────────────────────────────────
     fig_bar = empty_fig()
@@ -605,12 +727,43 @@ def _tab_overview(df, group_col, topn):
                 f"<br>PPN: Rp %{{x:.2f}} M"
                 f"<br>PPH: Rp %{{customdata[1]:.2f}} M<extra></extra>"
             )
-        fig_bar = go.Figure(go.Bar(**bar_kw))
+        # ── Pareto line: same df, sorted descending, cumsum from index 0 (largest) down
+        y_labels  = agg[gc].astype(str).tolist()          # index 0 = largest
+        total_ppn = agg["PPN_DIBAYAR"].sum() or 1
+        cum_pct   = (agg["PPN_DIBAYAR"].cumsum() / total_ppn * 100).tolist()
+        # index 0 → largest item's own share;  index -1 → 100%
+
+        fig_bar = go.Figure([
+            go.Bar(**bar_kw),
+            go.Scatter(
+                x=cum_pct,
+                y=y_labels,
+                xaxis="x2",
+                mode="lines+markers",
+                name="Kumulatif PPN %",
+                line=dict(color=CLR["warm"], width=2),
+                marker=dict(size=5, color=CLR["warm"]),
+                hovertemplate="%{y}<br>Kumulatif: %{x:.1f}%<extra></extra>",
+            ),
+        ])
         fig_bar.update_layout(**lo(
             title=f"<b>Top {topn} {gc} berdasarkan PPN</b>",
-            xaxis=dict(title="PPN (Rp Miliar)"),
-            yaxis=dict(tickfont=dict(size=9)),
+            xaxis=dict(title="PPN (Rp Miliar)", domain=[0, 1]),
+            xaxis2=dict(
+                title="Kumulatif PPN (%)",
+                overlaying="x",
+                side="top",
+                range=[0, 105],
+                ticksuffix="%",
+                showgrid=False,
+                color=CLR["warm"],
+            ),
+            yaxis=dict(
+                tickfont=dict(size=9),
+                autorange="reversed",   # index 0 (largest) renders at top
+            ),
             height=max(350, topn*28),
+            legend=dict(orientation="h", x=0, y=-0.05, font=dict(size=10)),
         ))
 
     # ── Donut PPN + Donut PPH ─────────────────────────────────────────────────
@@ -699,13 +852,36 @@ def _tab_compare(df):
         return html.Div("Tidak ada data multi-tahun.",
                         style={"color":CLR["muted"],"padding":"40px"})
 
+    # Single-year: skip trend/comparison charts — just show summary table
+    if len(summ) == 1:
+        yr = summ["Tahun"].iloc[0]
+        tbl_header = dict(
+            values=["<b>"+c+"</b>" for c in summ.columns],
+            fill_color=CLR["surface"], font=dict(color=CLR["text"],size=11),
+            align="center", line_color=CLR["border"])
+        tbl_cells = dict(
+            values=[
+                summ["Tahun"],
+                summ["NPWP"].apply(lambda v: f"{v:,}"),
+                summ["PIB"].apply(lambda v: f"{v:,}"),
+                summ["PPN (Rp M)"].apply(lambda v: f"{v:,.1f}"),
+                summ["PPH (Rp M)"].apply(lambda v: f"{v:,.1f}"),
+            ],
+            fill_color=CLR["card"], font=dict(color=CLR["muted"],size=11),
+            align="center", line_color=CLR["border"])
+        fig_s = go.Figure(go.Table(header=tbl_header, cells=tbl_cells))
+        fig_s.update_layout(**lo(title=f"<b>Ringkasan Periode: {yr}</b>",
+                                 height=200, margin=dict(l=10,r=10,t=44,b=10)))
+        return html.Div([
+            html.Div(
+                f"Menampilkan 1 periode ({yr}). Pilih lebih dari 1 tahun untuk grafik tren.",
+                style={"color":CLR["muted"],"fontSize":"12px","padding":"8px 12px",
+                       "backgroundColor":CLR["surface"],"borderRadius":"6px",
+                       "border":f"1px solid {CLR['border']}","marginBottom":"12px"}),
+            gr(fig_s),
+        ])
+
     note = None
-    if len(summ) < 2:
-        note = html.Div(
-            "Pilih minimal 2 tahun di sidebar untuk melihat grafik tren.",
-            style={"color":CLR["warm"],"fontSize":"12px","padding":"8px 12px",
-                   "backgroundColor":CLR["surface"],"borderRadius":"6px",
-                   "border":f"1px solid {CLR['warm']}44","marginBottom":"12px"})
 
     # Chart 1: PPN + PPH trend (plain Figure, no secondary_y)
     fig_trend = go.Figure()
@@ -1071,3 +1247,198 @@ def _chat_respond(n_clicks, n_submit, user_msg, history, state_json):
 )
 def _chat_clear(_):
     return [html.Div("Percakapan direset.", style={"color":CLR["muted"]})], []
+
+
+# ── Pareto computation ────────────────────────────────────────────────────────
+
+@callback(
+    Output("en-store-pareto",   "data"),
+    Output("en-pareto-status",  "children"),
+    Output("en-pareto-status",  "style"),
+    Output("en-pareto-metrics", "children"),
+    Output("en-btn-dl-npwp",    "disabled"),
+    Input("en-btn-pareto", "n_clicks"),
+    State("en-store-state", "data"),
+    State("en-sl-pareto",   "value"),
+    State("en-chk-dedup",   "value"),
+    prevent_initial_call=True,
+)
+def _compute_pareto(n_clicks, state_json, threshold_pct, dedup_chk):
+    _base = {"fontSize":"11px","padding":"7px 10px","marginTop":"2px",
+             "marginBottom":"4px","borderRadius":"6px","lineHeight":"1.4"}
+    _err_sty = {**_base, "color":CLR["danger"],  "border":f"1px solid {CLR['danger']}44"}
+    _ok_sty  = {**_base, "color":CLR["success"], "border":f"1px solid {CLR['success']}44"}
+
+    def _err(msg):
+        return {"error": msg}, f"❌ {msg}", _err_sty, None, True
+
+    if not state_json:
+        return _err("Pilih filter terlebih dahulu.")
+
+    threshold = (threshold_pct or 80) / 100.0
+    state     = json.loads(state_json)
+    df_raw    = load_multi(state["years"])
+    df_f      = apply_filters_cached(df_raw, state)
+
+    cluster_filter = state.get("cluster_filter", [])
+    if cluster_filter:
+        df_f = _apply_cluster_filter(df_f, cluster_filter)
+
+    if df_f.empty or "HS4" not in df_f.columns:
+        return _err("Tidak ada data setelah filter.")
+
+    # Aggregate PPN per HS4 — descending
+    hs4_agg = (
+        df_f.groupby("HS4", observed=True)["PPN_DIBAYAR"].sum()
+            .sort_values(ascending=False)
+            .reset_index()
+    )
+    hs4_agg.columns = ["HS4", "Total_PPN"]
+    total_ppn = hs4_agg["Total_PPN"].sum()
+    if total_ppn == 0:
+        return _err("Total PPN nol — tidak bisa menghitung pareto.")
+
+    hs4_agg["cum_share"] = hs4_agg["Total_PPN"].cumsum() / total_ppn
+    hs4_agg["Rank"]      = range(1, len(hs4_agg) + 1)
+    hs4_agg["Cluster"]   = hs4_agg["HS4"].apply(hs4_to_cluster)
+
+    # Include HS4 until cumulative share crosses threshold
+    prev_cum   = hs4_agg["cum_share"].shift(1, fill_value=0)
+    pareto_hs4 = hs4_agg[prev_cum < threshold].copy()
+    pareto_hs4 = pareto_hs4.rename(columns={"cum_share": "Cumulative_Share"})
+
+    pareto_hs4_list = pareto_hs4["HS4"].tolist()
+    final_share     = float(pareto_hs4["Cumulative_Share"].iloc[-1]) if not pareto_hs4.empty else 0
+    ppn_pareto_val  = float(pareto_hs4["Total_PPN"].sum())
+
+    # NPWP + row counts for the pareto subset
+    npwp_is_count = bool(df_f["_npwp_is_count"].any()) if "_npwp_is_count" in df_f.columns else True
+    n_npwp_pareto = 0
+    n_rows_pareto = 0
+    if not npwp_is_count and "NPWP" in df_f.columns:
+        df_par        = df_f[df_f["HS4"].isin(pareto_hs4_list)]
+        dedup         = dedup_chk and "dedup" in (dedup_chk or [])
+        n_npwp_pareto = int(df_par["NPWP"].nunique() if dedup else len(df_par))
+        n_rows_pareto = len(df_par)
+
+    def _fmt_ppn(v):
+        return f"Rp {v/1e12:.2f} T" if abs(v) >= 1e12 else f"Rp {v/1e9:.1f} M"
+
+    metric_rows = [
+        html.Div(f"HS4 terpilih : {len(pareto_hs4_list)} kode"),
+        html.Div(f"PPN pareto   : {_fmt_ppn(ppn_pareto_val)} ({final_share*100:.1f}% dari total)"),
+        html.Div(f"Threshold    : {threshold*100:.0f}%"),
+    ]
+    if not npwp_is_count:
+        metric_rows += [
+            html.Div(f"NPWP pareto  : {n_npwp_pareto:,}"),
+            html.Div(f"Baris data   : {n_rows_pareto:,}"),
+        ]
+    metrics_div = html.Div(metric_rows)
+
+    store_data = {
+        "threshold":      threshold,
+        "n_hs4_pareto":   len(pareto_hs4_list),
+        "n_npwp_pareto":  n_npwp_pareto,
+        "ppn_pareto":     ppn_pareto_val,
+        "ppn_total":      float(total_ppn),
+        "pareto_share":   final_share,
+        "npwp_is_count":  npwp_is_count,
+        "hs4_pareto":     pareto_hs4_list,
+        "hs4_table":      pareto_hs4[["HS4","Total_PPN","Cumulative_Share","Rank","Cluster"]]
+                          .to_dict(orient="records"),
+    }
+    status_txt = f"✅ Ready — {len(pareto_hs4_list)} HS4 ({final_share*100:.1f}%)"
+    return store_data, status_txt, _ok_sty, metrics_div, False
+
+
+# ── Pareto summary panel ──────────────────────────────────────────────────────
+
+@callback(
+    Output("en-pareto-summary", "children"),
+    Input("en-store-pareto", "data"),
+)
+def _update_pareto_summary(data):
+    if not data or data.get("error"):
+        msg = data.get("error","") if data else ""
+        return html.Span(
+            msg or "Klik '▶ Generate Populasi Pareto' untuk menghitung populasi.",
+            style={"color": CLR["muted"], "fontSize":"11px",
+                   "padding":"6px 0","display":"block"},
+        )
+
+    def _fmt(v):
+        return f"Rp {v/1e12:.2f} T" if abs(v) >= 1e12 else f"Rp {v/1e9:.1f} M"
+
+    threshold  = data.get("threshold", 0.7)
+    n_hs4      = data.get("n_hs4_pareto", 0)
+    ppn_pareto = data.get("ppn_pareto", 0)
+    share      = data.get("pareto_share", 0)
+    n_npwp     = data.get("n_npwp_pareto", 0)
+    is_count   = data.get("npwp_is_count", True)
+
+    cards = [
+        kpi_card("HS4 Pareto",  str(n_hs4),       CLR["warm"],
+                 f"threshold {threshold*100:.0f}%"),
+        kpi_card("PPN Pareto",  _fmt(ppn_pareto),  CLR["success"],
+                 f"{share*100:.1f}% dari total filtered"),
+    ]
+    if not is_count:
+        cards.append(
+            kpi_card("NPWP Pareto", f"{n_npwp:,}", CLR["purple"], "populasi WP")
+        )
+    return cards
+
+
+# ── Download: NPWP Pareto CSV ─────────────────────────────────────────────────
+
+@callback(
+    Output("en-download-npwp",  "data"),
+    Output("en-pareto-status",  "children", allow_duplicate=True),
+    Input("en-btn-dl-npwp",    "n_clicks"),
+    State("en-store-pareto",   "data"),
+    State("en-store-state",    "data"),
+    State("en-chk-dedup",      "value"),
+    prevent_initial_call=True,
+)
+def _dl_npwp(n_clicks, pareto_data, state_json, dedup_chk):
+    if not pareto_data or pareto_data.get("error") or not state_json:
+        return no_update, "❌ Generate Pareto terlebih dahulu."
+    if pareto_data.get("npwp_is_count"):
+        return no_update, "⚠️ Data T1 tidak memiliki NPWP individual."
+
+    state  = json.loads(state_json)
+    df_raw = load_multi(state["years"])
+    df_f   = apply_filters_cached(df_raw, state)
+
+    cluster_filter = state.get("cluster_filter", [])
+    if cluster_filter:
+        df_f = _apply_cluster_filter(df_f, cluster_filter)
+
+    pareto_hs4 = pareto_data.get("hs4_pareto", [])
+    df_par = df_f[df_f["HS4"].isin(pareto_hs4)].copy()
+    if df_par.empty:
+        return no_update, "⚠️ Tidak ada baris untuk HS4 Pareto terpilih."
+
+    # Export all raw columns (HS4, Chapter, Cluster pre-computed in load_raw)
+    df_export = df_par.drop(columns=["_npwp_is_count"], errors="ignore")
+
+    dedup = dedup_chk and "dedup" in (dedup_chk or [])
+    if dedup:
+        df_export = (df_export.sort_values("PPN_DIBAYAR", ascending=False)
+                               .drop_duplicates("NPWP")
+                               .reset_index(drop=True))
+
+    # Force NPWP as text in Excel: prefix with apostrophe so Excel's auto-parser
+    # treats the cell as text, preventing scientific notation and leading-zero loss.
+    # Strip first to avoid double prefix on re-export.
+    if "NPWP" in df_export.columns:
+        df_export = df_export.copy()
+        df_export["NPWP"] = "'" + df_export["NPWP"].astype(str).str.strip().str.lstrip("'")
+
+    csv_bytes = df_export.to_csv(index=False, encoding="utf-8-sig")
+    return (
+        dict(content=csv_bytes, filename="populasi_pareto_npwp.csv"),
+        f"⬇️ Download dimulai — {len(df_export):,} baris ✅",
+    )
+

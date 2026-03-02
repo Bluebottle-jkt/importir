@@ -90,6 +90,9 @@ app = Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 
+# Expose Flask WSGI app for Gunicorn: gunicorn app:server
+server = app.server
+
 # Flask secret key (CHANGE IN PRODUCTION via SECRET_KEY env var)
 _secret = os.environ.get("SECRET_KEY", "sr15-change-me-in-production-2026")
 if _secret == "sr15-change-me-in-production-2026":
@@ -393,6 +396,21 @@ def _get_lan_ip() -> str:
         return ip
     except Exception:
         return "127.0.0.1"
+
+
+# ── Production pre-load (runs when Gunicorn imports this module) ──────────────
+# Triggered by ENV=prod — skipped in dev to keep restarts fast.
+
+if os.environ.get("ENV") == "prod":
+    try:
+        from utils.data import load_raw, YEARS as _PROD_YEARS
+        logger.info("[STARTUP] Preloading all years for production...")
+        for _yr in _PROD_YEARS:
+            _df = load_raw(_yr)
+            logger.info("[STARTUP] Preloaded %s: %d rows", _yr, len(_df))
+        logger.info("[STARTUP] All years cached — ready.")
+    except Exception as _e:
+        logger.warning("[STARTUP] Preload failed: %s", _e)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

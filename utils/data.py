@@ -107,6 +107,24 @@ def load_raw(year: str) -> pd.DataFrame:
             lambda v: str(int(v))[:4] if v and v > 0 else "0000"
         )
 
+        # Derive Chapter (int) and Cluster (string) — computed once at load time
+        def _to_chapter(hs4_str: str):
+            digits = "".join(c for c in str(hs4_str) if c.isdigit())
+            return int(digits[:2]) if len(digits) >= 2 else None
+
+        def _to_cluster(ch) -> str:
+            if ch is None:
+                return "Lainnya"
+            ch = int(ch)
+            if ch == 85:              return "Elektronik"
+            if ch == 87:              return "Otomotif"
+            if 28 <= ch <= 38:        return "Kimia/Farmasi"
+            if 10 <= ch <= 11:        return "Pangan"
+            return "Lainnya"
+
+        df["Chapter"] = df["HS4"].apply(_to_chapter)
+        df["Cluster"] = df["Chapter"].apply(_to_cluster)
+
         # Derive KPP_CODE_3
         if not df["_npwp_is_count"].any():
             df["KPP_CODE_3"] = df["NPWP"].str.zfill(15).str[9:12]
@@ -131,7 +149,7 @@ def load_raw(year: str) -> pd.DataFrame:
         # ── Convert to Categorical — 5-10× faster isin/groupby/nunique ──────────
         _CAT_COLS = ["NM_KLU","NM_KELOMPOK","NM_DETIL","NM_SUBGOL",
                      "KD_KELOMPOK","KD_DETIL","KD_KLU",
-                     "HS4","KPP_CODE_3","_year"]
+                     "HS4","KPP_CODE_3","_year","Cluster"]
         for col in _CAT_COLS:
             if col in df.columns:
                 df[col] = df[col].astype("category")
