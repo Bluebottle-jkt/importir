@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eksplorasi Data PIB × KLU — SR Importir Umum 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=Playfair+Display:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0B0F1A;
+  --bg-card: #111827;
+  --bg-card-hover: #1A2235;
+  --surface: #1E293B;
+  --border: #2A3A52;
+  --accent: #3B82F6;
+  --accent-glow: rgba(59, 130, 246, 0.25);
+  --accent-warm: #F59E0B;
+  --accent-warm-glow: rgba(245, 158, 11, 0.2);
+  --danger: #EF4444;
+  --danger-glow: rgba(239, 68, 68, 0.2);
+  --success: #10B981;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── Navigation ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(11, 15, 26, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+  transition: transform 0.3s;
+}
+.nav-brand {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nav-slides {
+  display: flex; gap: 2px; align-items: center;
+}
+.nav-dot {
+  width: 28px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none; outline: none;
+}
+.nav-dot:hover { background: var(--text-muted); }
+.nav-dot.active {
+  background: var(--accent);
+  width: 40px;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.nav-counter {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-width: 56px; text-align: right;
+}
+
+/* ── Slide System ── */
+.slide {
+  min-height: 100vh;
+  padding: 80px 2rem 3rem;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  opacity: 0; transform: translateY(30px);
+  animation: slideIn 0.7s ease forwards;
+}
+@keyframes slideIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Slide 0: Title ── */
+.title-slide {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  position: relative;
+  padding: 2rem;
+}
+.title-slide::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 30% 40%, rgba(59,130,246,0.08), transparent),
+    radial-gradient(ellipse 500px 300px at 70% 60%, rgba(245,158,11,0.05), transparent);
+  pointer-events: none;
+}
+.title-tag {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.25);
+  padding: 6px 18px;
+  border-radius: 20px;
+  margin-bottom: 2rem;
+  display: inline-block;
+}
+.title-main {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.title-sub {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  max-width: 680px;
+  margin-bottom: 2.5rem;
+}
+.title-meta {
+  display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.title-meta span { display: flex; align-items: center; gap: 6px; }
+.title-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* ── Section Headers ── */
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+.section-desc {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  max-width: 720px;
+  margin-bottom: 2.5rem;
+}
+
+/* ── Cards ── */
+.card-grid {
+  display: grid;
+  gap: 1rem;
+}
+.card-grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.card-grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.card-grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(59,130,246,0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.card-icon {
+  font-size: 1.6rem;
+  margin-bottom: 0.75rem;
+}
+.card-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+.card-value {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+}
+.card-sub {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.card-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ── Tables ── */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  margin: 1rem 0;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+thead th {
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 12px 16px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+}
+tbody td {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(42,58,82,0.5);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+tbody tr:hover { background: rgba(59,130,246,0.04); }
+tbody tr:last-child td { border-bottom: none; }
+.mono { font-family: var(--font-mono); font-size: 0.8rem; }
+.num-r { text-align: right; font-family: var(--font-mono); }
+.highlight-cell {
+  color: var(--accent-warm);
+  font-weight: 600;
+}
+.danger-cell {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ── Alert Boxes ── */
+.alert {
+  display: flex; gap: 12px;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border: 1px solid;
+}
+.alert-warn {
+  background: rgba(245,158,11,0.06);
+  border-color: rgba(245,158,11,0.2);
+  color: var(--accent-warm);
+}
+.alert-danger {
+  background: rgba(239,68,68,0.06);
+  border-color: rgba(239,68,68,0.2);
+  color: var(--danger);
+}
+.alert-info {
+  background: rgba(59,130,246,0.06);
+  border-color: rgba(59,130,246,0.2);
+  color: var(--accent);
+}
+.alert-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Tags / Badges ── */
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--accent); }
+.badge-amber { background: rgba(245,158,11,0.15); color: var(--accent-warm); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--danger); }
+.badge-green { background: rgba(16,185,129,0.15); color: var(--success); }
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 2rem 0;
+}
+
+/* ── Flow Diagram ── */
+.flow {
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+.flow-step {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 120px;
+}
+.flow-step.active {
+  border-color: var(--accent);
+  background: rgba(59,130,246,0.08);
+  color: var(--accent);
+}
+.flow-arrow {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+/* ── Numbered Steps ── */
+.steps { display: flex; flex-direction: column; gap: 1rem; margin: 1rem 0; }
+.step {
+  display: flex; gap: 1rem; align-items: flex-start;
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.step-num {
+  width: 32px; height: 32px;
+  background: rgba(59,130,246,0.15);
+  color: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.step-content h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+.step-content p { font-size: 0.85rem; color: var(--text-secondary); }
+
+/* ── Team Card ── */
+.team-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-left: 3px solid var(--accent);
+}
+.team-card .cluster-name {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+.team-row {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  font-size: 0.85rem; color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+.team-row .label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* ── Stat Bar ── */
+.stat-bar-wrap { margin: 0.75rem 0; }
+.stat-bar-label {
+  display: flex; justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+.stat-bar {
+  height: 6px;
+  background: var(--surface);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1.5s ease;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .slide { padding: 70px 1rem 2rem; }
+  .card-grid.cols-2, .card-grid.cols-3, .card-grid.cols-4 {
+    grid-template-columns: 1fr;
+  }
+  .nav { padding: 0 1rem; }
+  .title-meta { flex-direction: column; gap: 0.5rem; }
+}
+
+/* ── Print ── */
+@media print {
+  .nav { display: none; }
+  .slide { min-height: auto; page-break-after: always; padding: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav" id="nav">
+  <div class="nav-brand">CRM SR-15 / 2026</div>
+  <div class="nav-slides" id="navDots"></div>
+  <div class="nav-counter" id="navCounter">01 / 10</div>
+</nav>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 0 — TITLE -->
+<!-- ════════════════════════════════════════ -->
+<section class="title-slide slide" data-slide="0">
+  <div class="title-tag">Tindak Lanjut Rapat 12 Feb 2026 & Koordinasi terkait</div>
+  <h1 class="title-main">Eksplorasi & Pemetaan<br>Data PIB × KLU<br>berdasarkan HS Code</h1>
+  <p class="title-sub">Panduan kerja untuk Business Analyst, Data Engineer, dan Data Statistician — Tim Specific Risk Importir Umum</p>
+  <div class="title-meta">
+    <span><span class="dot"></span> Subtim Data Analyst CRM</span>
+    <span><span class="dot" style="background:var(--accent-warm)"></span> Februari 2026</span>
+    <span><span class="dot" style="background:var(--success)"></span> Fase 1 — Arus Barang + Dokumen</span>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 1 — DATA OVERVIEW -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="1">
+  <div class="section-num">01 — Data Overview</div>
+  <div class="section-title">Data yang Tersedia</div>
+  <div class="section-desc">Resume populasi PIB per HS Code dengan dimensi baru: KLU (Klasifikasi Lapangan Usaha) Wajib Pajak untuk analisis sinkronisasi.</div>
+
+  <div class="card-grid cols-4" style="margin-bottom:1.5rem">
+    <div class="card">
+      <div class="card-label">Data Raw</div>
+      <div class="card-value">70 Jt</div>
+      <div class="card-sub">Total baris PIB</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Data Resume</div>
+      <div class="card-value">183.246</div>
+      <div class="card-sub">Baris file HSCODE_KLU.xlsx</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Periode Analisis</div>
+      <div class="card-value" style="font-size:1.4rem">2022–2024</div>
+      <div class="card-sub">3 tahun pajak</div>
+    </div>
+    <div class="card">
+      <div class="card-label">File</div>
+      <div class="card-value" style="font-size:1rem; font-family:var(--font-mono)">HSCODE_KLU.xlsx</div>
+      <div class="card-sub">15 kolom, 1 sheet</div>
+    </div>
+  </div>
+
+  <div class="card-grid cols-4">
+    <div class="card">
+      <div class="card-icon">📋</div>
+      <div class="card-value" style="font-size:1.5rem">3.854</div>
+      <div class="card-sub">HS Code unik (8 digit)</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📦</div>
+      <div class="card-value" style="font-size:1.5rem">859</div>
+      <div class="card-sub">Kelompok HS (4 digit)</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏢</div>
+      <div class="card-value" style="font-size:1.5rem">1.197</div>
+      <div class="card-sub">KLU unik</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏷️</div>
+      <div class="card-value" style="font-size:1.5rem">500</div>
+      <div class="card-sub">Sub-golongan KLU</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 2 — STRUKTUR DATA -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="2">
+  <div class="section-num">02 — Struktur Data</div>
+  <div class="section-title">Kolom & Referensi</div>
+  <div class="section-desc">File HSCODE_KLU.xlsx memuat 15 kolom yang mencakup dimensi waktu, klasifikasi barang (HS), klasifikasi usaha (KLU), dan metrik transaksi.</div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Kolom</th><th>Tipe</th><th>Deskripsi</th><th>Contoh</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">THN_PAJAK</td><td><span class="badge badge-blue">int</span></td><td>Tahun pajak</td><td class="mono">2022, 2023, 2024</td></tr>
+        <tr><td class="mono">KD_KLU</td><td><span class="badge badge-green">str</span></td><td>Kode KLU Wajib Pajak (5 digit)</td><td class="mono">46599</td></tr>
+        <tr><td class="mono">NM_KLU</td><td><span class="badge badge-green">str</span></td><td>Nama lengkap KLU</td><td>Perdagangan Besar Mesin…</td></tr>
+        <tr><td class="mono">NM_SUBGOL</td><td><span class="badge badge-green">str</span></td><td>Sub-golongan KLU</td><td>Perdagangan Besar Mesin, Peralatan…</td></tr>
+        <tr><td class="mono">POS_TARIF_HS</td><td><span class="badge badge-amber">float</span></td><td>Kode HS 8 digit</td><td class="mono">85371099</td></tr>
+        <tr><td class="mono">KD_KELOMPOK</td><td><span class="badge badge-amber">float</span></td><td>Kelompok HS (4 digit)</td><td class="mono">8537</td></tr>
+        <tr><td class="mono">NM_KELOMPOK</td><td><span class="badge badge-amber">str</span></td><td>Nama kelompok HS</td><td>Papan, panel, konsol…</td></tr>
+        <tr><td class="mono">KD_DETIL</td><td><span class="badge badge-amber">float</span></td><td>Kode detail HS (8 digit)</td><td class="mono">85371099</td></tr>
+        <tr><td class="mono">NM_DETIL</td><td><span class="badge badge-amber">str</span></td><td>Nama detail HS</td><td>Untuk voltase ≤1000 V: Lain-lain</td></tr>
+        <tr><td class="mono">jml_npwp</td><td><span class="badge badge-blue">int</span></td><td>Jumlah NPWP unik (importir)</td><td class="mono">126</td></tr>
+        <tr><td class="mono">jml_pib</td><td><span class="badge badge-blue">int</span></td><td>Jumlah dokumen PIB</td><td class="mono">614</td></tr>
+        <tr><td class="mono">jml_detail_pib</td><td><span class="badge badge-blue">int</span></td><td>Jumlah baris detail PIB</td><td class="mono">6.192</td></tr>
+        <tr><td class="mono">PPN_DIBAYAR</td><td><span class="badge badge-blue">float</span></td><td>Total PPN (Rp)</td><td class="mono">9.385.283.000</td></tr>
+        <tr><td class="mono">PPH_DIBAYAR</td><td><span class="badge badge-blue">float</span></td><td>Total PPh (Rp)</td><td class="mono">2.112.882.000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div><strong>Data Quality:</strong> 18.947 baris memiliki <code>KD_KELOMPOK</code> kosong (NaN) dan 16.064 baris memiliki <code>NM_DETIL</code> kosong. Perlu diidentifikasi dan diputuskan penangannya oleh masing-masing tim klaster.</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 3 — TEMUAN AWAL -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="3">
+  <div class="section-num">03 — Temuan Awal</div>
+  <div class="section-title">Red Flags dari Data</div>
+  <div class="section-desc">Eksplorasi awal mengungkap beberapa pola yang perlu menjadi perhatian seluruh tim klaster.</div>
+
+  <div class="card-grid cols-3" style="margin-bottom:1.5rem">
+    <div class="card" style="border-left:3px solid var(--danger)">
+      <div class="card-label">Dominasi "Lain-lain"</div>
+      <div class="card-value" style="color:var(--danger)">62,2%</div>
+      <div class="card-sub">Baris data memiliki NM_DETIL mengandung "Lain-lain" — mayoritas transaksi ada di kode catch-all</div>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:62.2%;background:var(--danger)"></div></div>
+      </div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent-warm)">
+      <div class="card-label">HS dengan >100 KLU</div>
+      <div class="card-value" style="color:var(--accent-warm)">244</div>
+      <div class="card-sub">Kode HS dipakai oleh lebih dari 100 sektor usaha berbeda — indikasi klasifikasi tidak spesifik</div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent)">
+      <div class="card-label">Dispersi Tertinggi</div>
+      <div class="card-value" style="color:var(--accent)">575</div>
+      <div class="card-sub">KLU berbeda untuk HS 85371099 — Panel listrik "Lain-lain" diimpor hampir semua sektor</div>
+    </div>
+  </div>
+
+  <div class="card-grid cols-2">
+    <div class="card" style="border-left:3px solid var(--accent-warm)">
+      <div class="card-label">HS dengan >50 KLU</div>
+      <div class="card-value" style="font-size:1.4rem;color:var(--accent-warm)">583 HS Code</div>
+      <div class="card-sub">Perlu pengecekan kewajaran sektor secara lebih mendalam</div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--danger)">
+      <div class="card-label">Data Tidak Ter-mapping</div>
+      <div class="card-value" style="font-size:1.4rem;color:var(--danger)">18.947 baris</div>
+      <div class="card-sub">KD_KELOMPOK kosong — tidak ter-mapping ke kelompok HS, perlu investigasi</div>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" style="margin-top:1.5rem">
+    <span class="alert-icon">🚨</span>
+    <div><strong>Implikasi:</strong> Kode HS "Lain-lain" menjadi "tempat parkir" klasifikasi yang tidak jelas dan digunakan lintas sektor. Ini berpotensi sangat tinggi untuk <strong>misdeclaration</strong> — salah satu risk event utama yang disepakati di rapat.</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 4 — SAMPEL ANOMALI HS × KLU -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="4">
+  <div class="section-num">04 — Sampel Anomali</div>
+  <div class="section-title">Ketidaksinkronan HS Code vs KLU</div>
+  <div class="section-desc">Contoh nyata dari data: WP mengimpor barang yang tidak sesuai dengan bidang usaha terdaftar (KLU).</div>
+
+  <h3 style="font-size:1rem;margin-bottom:0.75rem;color:var(--accent-warm)">🔍 Contoh Mismatch per Klaster</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Klaster</th><th>HS Code</th><th>Barang</th><th>KLU WP</th><th>Anomali</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-blue">Elektronik</span></td>
+          <td class="mono">85366929</td>
+          <td>Aparatus listrik "Lain-lain"</td>
+          <td class="danger-cell">Pertambangan Bijih Nikel</td>
+          <td>WP tambang impor elektronik</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">Elektronik</span></td>
+          <td class="mono">85235200</td>
+          <td>Smart card</td>
+          <td class="danger-cell">Aktivitas Taman Hiburan</td>
+          <td>WP hiburan impor komponen IT</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">Kimia</span></td>
+          <td class="mono">28332500</td>
+          <td>Sulfat tembaga</td>
+          <td class="danger-cell">Industri Bumbu Masak</td>
+          <td>WP makanan impor bahan kimia</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">Kimia</span></td>
+          <td class="mono">28332290</td>
+          <td>Sulfat aluminium "Lain-lain"</td>
+          <td class="highlight-cell">Perdagangan Obat Farmasi Hewan</td>
+          <td>KLU terkait tapi beda sub-sektor</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="font-size:1rem;margin:1.5rem 0 0.75rem;color:var(--danger)">🚨 HS 85371099 — Dipakai 575 KLU Berbeda</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Tahun</th><th>KD_KLU</th><th>NM_KLU</th><th>NPWP</th><th>PIB</th><th style="text-align:right">PPN Dibayar</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">2024</td><td class="mono">86903</td><td>Aktivitas Pelayanan Penunjang Kesehatan</td><td class="mono">2</td><td class="mono">39</td><td class="num-r">281.458.907</td></tr>
+        <tr><td class="mono">2023</td><td class="mono">13132</td><td>Industri Penyempurnaan Kain</td><td class="mono">7</td><td class="mono">11</td><td class="num-r">195.538.912</td></tr>
+        <tr><td class="mono">2022</td><td class="mono">46592</td><td>Perdagangan Besar Alat Transportasi Laut</td><td class="mono">4</td><td class="mono">8</td><td class="num-r">48.646.890</td></tr>
+        <tr><td class="mono">2024</td><td class="mono">51104</td><td>Angkutan Udara Niaga Tidak Berjadwal</td><td class="mono">2</td><td class="mono">2</td><td class="num-r">7.795.048</td></tr>
+        <tr><td class="mono">2023</td><td class="mono">52219</td><td>Aktivitas Penunjang Angkutan Darat</td><td class="mono">2</td><td class="mono">2</td><td class="num-r">4.573.890</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">💡</span>
+    <div>Panel listrik "Lain-lain" diimpor oleh sektor kesehatan, tekstil, transportasi laut, penerbangan, dan ratusan sektor lainnya. Ini menunjukkan perlunya <strong>scoring kewajaran HS × KLU</strong>.</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 5 — SAMPEL DATA PER KLASTER -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="5">
+  <div class="section-num">05 — Sampel Data per Klaster</div>
+  <div class="section-title">Preview Data Eksplorasi</div>
+  <div class="section-desc">Sampel data dari masing-masing klaster yang menunjukkan variasi KLU dan pola transaksi.</div>
+
+  <h3 style="font-size:1rem;margin-bottom:0.75rem">⚡ Klaster Elektronik <span class="badge badge-blue">Chapter 85</span> &nbsp; <span style="color:var(--text-muted);font-weight:400;font-size:0.85rem">28.813 baris · 286 HS · 911 KLU</span></h3>
+  <div class="table-wrap" style="margin-bottom:1.5rem">
+    <table>
+      <thead><tr><th>Thn</th><th>KLU</th><th>HS Code</th><th>Barang</th><th>NPWP</th><th>PIB</th><th style="text-align:right">PPN</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">2023</td><td>Konstruksi Jaringan Irigasi</td><td class="mono">85044011</td><td>Konverter: UPS</td><td class="mono">1</td><td class="mono">1</td><td class="num-r">15.213.942</td></tr>
+        <tr><td class="mono">2024</td><td>Perdagangan Eceran Komputer</td><td class="mono">85285910</td><td>Monitor berwarna</td><td class="mono">10</td><td class="mono">37</td><td class="num-r">1.431.287.846</td></tr>
+        <tr><td class="mono">2024</td><td class="danger-cell">Pertambangan Bijih Nikel</td><td class="mono">85366929</td><td>Aparatus listrik <strong>"Lain-lain"</strong></td><td class="mono">1</td><td class="mono">1</td><td class="num-r">10.098.260</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="font-size:1rem;margin-bottom:0.75rem">🚗 Klaster Otomotif <span class="badge badge-amber">Chapter 87</span></h3>
+  <div class="table-wrap" style="margin-bottom:1.5rem">
+    <table>
+      <thead><tr><th>Thn</th><th>KLU</th><th>HS Code</th><th>Barang</th><th>NPWP</th><th>PIB</th><th style="text-align:right">PPN</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">2022</td><td>Perdagangan Besar Suku Cadang Mobil</td><td class="mono">87082920</td><td>Bagian sabuk pengaman</td><td class="mono">6</td><td class="mono">22</td><td class="num-r">562.931.614</td></tr>
+        <tr><td class="mono">2022</td><td>Perdagangan Besar Mobil Baru</td><td class="mono">87084025</td><td>Gear box kendaraan pos 8701</td><td class="mono">2</td><td class="mono">119</td><td class="num-r">572.095.939</td></tr>
+        <tr><td class="mono">2024</td><td>Perdagangan Eceran Mobil Baru</td><td class="mono">87032364</td><td>Mobil silinder &gt;2500 cc</td><td class="mono">2</td><td class="mono">2</td><td class="num-r">268.614.801</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+    <div>
+      <h3 style="font-size:1rem;margin-bottom:0.75rem">🧪 Klaster Kimia/Farmasi <span class="badge badge-green">Ch 28–38</span></h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Thn</th><th>KLU</th><th>HS</th><th style="text-align:right">PPN</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">2023</td><td class="danger-cell">Industri Bumbu Masak</td><td class="mono">28332500</td><td class="num-r">963.641</td></tr>
+            <tr><td class="mono">2023</td><td>Perd. Obat Farmasi Hewan</td><td class="mono">28332290</td><td class="num-r">42.507.808</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-size:1rem;margin-bottom:0.75rem">🌾 Klaster Pangan <span class="badge badge-green">Ch 10–11</span></h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Thn</th><th>KLU</th><th>HS</th><th style="text-align:right">PPN</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">2024</td><td>Perd. Eceran Minimarket</td><td class="mono">10089000</td><td class="num-r">876.041</td></tr>
+            <tr><td class="mono">2024</td><td class="danger-cell">Industri Pengolahan Ikan</td><td class="mono">11081910</td><td class="num-r">27.766.695</td></tr>
+            <tr><td class="mono">2024</td><td class="danger-cell">Perd. Besar Daging Sapi</td><td class="mono">11081990</td><td class="num-r">4.959.676</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 6 — PEMBAGIAN TUGAS -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="6">
+  <div class="section-num">06 — Pembagian Tugas</div>
+  <div class="section-title">Tim Klaster & Penanggung Jawab</div>
+  <div class="section-desc">Sesuai kesimpulan rapat 12 Februari 2026.</div>
+
+  <div class="card-grid cols-2">
+    <div class="team-card" style="border-left-color:#3B82F6">
+      <div class="cluster-name">⚡ Smartphone, Chip, Laptop, Elektronik</div>
+      <div class="team-row">
+        <div><span class="label">Business Analyst</span>Adyatmika Darmasatyaringgara<br>Rizki Ilham Akbar</div>
+        <div><span class="label">Data Preparation</span>Mudji Rahardjo</div>
+      </div>
+    </div>
+    <div class="team-card" style="border-left-color:#F59E0B">
+      <div class="cluster-name">🚗 Mobil CBU, CKD/IKD, Suku Cadang</div>
+      <div class="team-row">
+        <div><span class="label">Business Analyst</span>Mei Magdalena Tambunan<br>Nadya Rahma Annisa</div>
+        <div><span class="label">Data Preparation</span>Sulung Anfiarto<br>Toto Andriyanto</div>
+      </div>
+    </div>
+    <div class="team-card" style="border-left-color:#10B981">
+      <div class="cluster-name">🧪 Bahan Baku Farmasi, Pewarna, Kimia</div>
+      <div class="team-row">
+        <div><span class="label">Business Analyst</span>Ahmad Sigid Febriyanto<br>Filmantoro</div>
+        <div><span class="label">Data Preparation</span>Zaky Wahyu Sabhana<br>Mudji Rahardjo</div>
+      </div>
+    </div>
+    <div class="team-card" style="border-left-color:#8B5CF6">
+      <div class="cluster-name">🌾 Gandum, Meslin, Jagung, Beras</div>
+      <div class="team-row">
+        <div><span class="label">Business Analyst</span>Muhammad Indra Kurniawan<br>Ni Putu Purnami Jayanti<br>Dwi Joko Susilo</div>
+        <div><span class="label">Data Preparation</span>Dona Sri Subekti<br>Toto Andriyanto</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info" style="margin-top:1.5rem">
+    <span class="alert-icon">📌</span>
+    <div>Setiap Business Analyst <strong>wajib berkoordinasi</strong> dengan Data Engineer dan Data Statistician masing-masing untuk permintaan data detail, validasi statistik, dan pemetaan bersama.</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 7 — INSTRUKSI BA -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="7">
+  <div class="section-num">07 — Instruksi Kerja</div>
+  <div class="section-title">Panduan untuk Business Analyst</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Pemetaan HS Code ke Klaster</h4>
+        <p>Identifikasi seluruh <code>POS_TARIF_HS</code> beserta <code>KD_KELOMPOK</code> dan <code>NM_DETIL</code> yang relevan. Filter hanya tahun 2022–2024. Perhatikan kode "Lain-lain" (62,2% data) dan baris NaN (18.947 baris tanpa kelompok).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Analisis Sinkronisasi HS × KLU</h4>
+        <p><strong>Kewajaran:</strong> Apakah KLU WP wajar untuk barang yang diimpor? <strong>Dispersi:</strong> Berapa banyak KLU unik per HS Code? (>100 = perhatian khusus). <strong>Dominan vs Outlier:</strong> KLU mayoritas vs KLU anomali — prioritaskan outlier bernilai tinggi.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Profiling per HS Code</h4>
+        <p>Analisis: konsentrasi importir (jml_npwp sedikit tapi nilai tinggi), rasio PPh/PPN anomali, tren 3 tahun (naik/turun signifikan), HS "Lainnya" yang mendominasi nilai, dan KLU tidak wajar bernilai besar.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h4>Cross-check Antar Klaster</h4>
+        <p>Apabila ditemukan HS Code yang seharusnya masuk klaster lain, koordinasikan dengan tim klaster terkait untuk menghindari duplikasi analisis.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 8 — KOORDINASI -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="8">
+  <div class="section-num">08 — Koordinasi Wajib</div>
+  <div class="section-title">BA ↔ Data Engineer ↔ Data Statistician</div>
+
+  <div class="flow" style="margin-bottom:2rem;justify-content:center">
+    <div class="flow-step active">Business Analyst</div>
+    <span class="flow-arrow">⇄</span>
+    <div class="flow-step">Data Engineer</div>
+    <span class="flow-arrow">⇄</span>
+    <div class="flow-step">Data Statistician</div>
+  </div>
+
+  <div class="card-grid cols-3">
+    <div class="card" style="border-top:3px solid var(--accent)">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Business Analyst</div>
+      <div class="card-sub">
+        Pemetaan HS Code ke klaster, analisis sinkronisasi HS × KLU, identifikasi anomali, dan penyusunan rekomendasi HS Code prioritas untuk pendalaman risk event.
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--accent-warm)">
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">Data Engineer</div>
+      <div class="card-sub">
+        Menyediakan data detail (raw) dari 70 juta baris per kebutuhan BA. Join/merge data tambahan (SPT, e-Faktur). Menangani data quality issues (NaN pada KD_KELOMPOK, NM_DETIL).
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--success)">
+      <div class="card-icon">📐</div>
+      <div class="card-title">Data Statistician</div>
+      <div class="card-sub">
+        Penentuan threshold/cutoff, uji signifikansi tren antar tahun, deteksi outlier PPN/PPh, analisis distribusi kode "Lainnya", dan pengembangan <strong>scoring sinkronisasi HS × KLU</strong>.
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <h3 style="font-size:1rem;margin-bottom:0.75rem;color:var(--text-secondary)">Output Pemetaan Bersama</h3>
+  <div class="flow" style="justify-content:center">
+    <div class="flow-step">HS Code 8 digit</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">Kelompok Risiko</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">KLU Wajar</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step active" style="border-color:var(--danger);background:var(--danger-glow);color:var(--danger)">KLU Anomali</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 9 — OUTPUT & DELIVERABLES -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="9">
+  <div class="section-num">09 — Output yang Diharapkan</div>
+  <div class="section-title">Deliverables per Klaster</div>
+  <div class="section-desc">Setiap tim klaster menghasilkan 5 output berikut sebagai prasyarat sebelum tahap pemodelan risiko.</div>
+
+  <div class="card-grid cols-2" style="margin-bottom:1.5rem">
+    <div class="card">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div class="step-num" style="background:rgba(59,130,246,0.15);color:var(--accent)">1</div>
+        <div>
+          <div class="card-title">Daftar HS Code Final</div>
+          <div class="card-sub">Kode HS yang masuk scope klaster, beserta justifikasi — termasuk keputusan untuk kode "Lainnya" dan baris NaN.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div class="step-num" style="background:rgba(245,158,11,0.15);color:var(--accent-warm)">2</div>
+        <div>
+          <div class="card-title">Profil Ringkasan per HS Code</div>
+          <div class="card-sub">Tren 3 tahun (2022→2024), konsentrasi importir, nilai pajak, dan dispersi KLU per kode HS.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div class="step-num" style="background:rgba(239,68,68,0.15);color:var(--danger)">3</div>
+        <div>
+          <div class="card-title">Matriks Sinkronisasi HS × KLU</div>
+          <div class="card-sub">Daftar kombinasi wajar dan kombinasi anomali untuk setiap HS Code prioritas dalam klaster.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div class="step-num" style="background:rgba(16,185,129,0.15);color:var(--success)">4</div>
+        <div>
+          <div class="card-title">Rekomendasi HS Code Prioritas</div>
+          <div class="card-sub">Untuk pendalaman risk event: Mispricing, Misdeclaration, API-P Abuse, Artificial Loss, dll.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="border-left:3px solid var(--accent)">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div class="step-num" style="background:rgba(59,130,246,0.15);color:var(--accent)">5</div>
+      <div>
+        <div class="card-title">Catatan Kebutuhan Data Tambahan</div>
+        <div class="card-sub">Data yang perlu disiapkan Data Engineer untuk analisis lanjutan — misalnya data per-NPWP, per-transaksi, per-negara asal dari 70 juta baris raw, atau data SPT dan e-Faktur untuk fase berikutnya.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDE 10 — PENUTUP -->
+<!-- ════════════════════════════════════════ -->
+<section class="slide" data-slide="10" style="text-align:center;align-items:center">
+  <div class="section-num">10 — Next Steps</div>
+  <div class="section-title" style="max-width:700px">Mulai Eksplorasi &<br>Sampaikan Progres Berkala</div>
+  <div class="section-desc" style="text-align:center;max-width:640px;margin-left:auto;margin-right:auto">
+    Output pemetaan HS Code per klaster menjadi prasyarat sebelum masuk ke tahap penentuan variabel prediktor dan pemodelan risiko.
+  </div>
+
+  <div class="flow" style="justify-content:center;margin:2rem 0">
+    <div class="flow-step active">Pemetaan HS × KLU</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">Variabel Prediktor</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">Pemodelan Risiko</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">Scoring & Ranking</div>
+  </div>
+
+  <div style="margin-top:2rem;display:flex;gap:1rem;flex-wrap:wrap;justify-content:center">
+    <div style="padding:12px 24px;border:1px solid var(--border);border-radius:10px;font-size:0.85rem;color:var(--text-muted)">
+      📄 Notula Rapat 12 Feb 2026
+    </div>
+    <div style="padding:12px 24px;border:1px solid var(--border);border-radius:10px;font-size:0.85rem;color:var(--text-muted)">
+      💬 Koordinasi 23 Feb 2026
+    </div>
+    <div style="padding:12px 24px;border:1px solid var(--border);border-radius:10px;font-size:0.85rem;color:var(--text-muted)">
+      📊 HSCODE_KLU.xlsx
+    </div>
+  </div>
+
+  <p style="margin-top:3rem;font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">
+    Subtim Data Analyst CRM — Specific Risk Importir Umum — 2026
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SCRIPTS -->
+<!-- ════════════════════════════════════════ -->
+<script>
+(function() {
+  const slides = document.querySelectorAll('[data-slide]');
+  const totalSlides = slides.length;
+  const navDots = document.getElementById('navDots');
+  const navCounter = document.getElementById('navCounter');
+
+  // Create dots
+  for (let i = 0; i < totalSlides; i++) {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot';
+    dot.dataset.idx = i;
+    dot.addEventListener('click', () => {
+      slides[i].scrollIntoView({ behavior: 'smooth' });
+    });
+    navDots.appendChild(dot);
+  }
+
+  const dots = document.querySelectorAll('.nav-dot');
+
+  // Intersection Observer for active slide tracking
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = parseInt(entry.target.dataset.slide);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        navCounter.textContent = String(idx + 1).padStart(2, '0') + ' / ' + String(totalSlides).padStart(2, '0');
+
+        // Animate elements in view
+        entry.target.style.animationDelay = '0s';
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.3 });
+
+  slides.forEach(s => observer.observe(s));
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const activeIdx = [...dots].findIndex(d => d.classList.contains('active'));
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      if (activeIdx < totalSlides - 1) slides[activeIdx + 1].scrollIntoView({ behavior: 'smooth' });
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (activeIdx > 0) slides[activeIdx - 1].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  // Animate stat bars on scroll
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const fill = entry.target.querySelector('.stat-bar-fill');
+        if (fill) fill.style.width = fill.style.width;
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.stat-bar-wrap').forEach(b => barObserver.observe(b));
+})();
+</script>
+</body>
+</html>

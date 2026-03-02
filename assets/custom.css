@@ -1,0 +1,43 @@
+/* Slider mark labels — ensure visibility on dark backgrounds */
+.rc-slider-mark-text,
+.dash-slider .rc-slider-mark-text {
+    color: #94A3B8 !important;
+    font-size: 10px !important;
+}
+
+/* Range slider tooltip */
+.dash-slider .rc-slider-tooltip-content {
+    background-color: #1E293B !important;
+    color: #E2E8F0 !important;
+    border: 1px solid #2A3A52 !important;
+    font-size: 11px !important;
+}
+
+/* Slider rail + track */
+.rc-slider-rail { background-color: #2A3A52 !important; }
+.rc-slider-track { background-color: #3B82F6 !important; }
+.rc-slider-handle {
+    border-color: #3B82F6 !important;
+    background-color: #1E293B !important;
+}
+.rc-slider-handle:hover,
+.rc-slider-handle-dragging {
+    border-color: #60A5FA !important;
+    box-shadow: 0 0 0 5px rgba(59,130,246,0.2) !important;
+}
+
+/* Dropdown dark styling */
+.Select-control, .Select-menu-outer {
+    background-color: #1E293B !important;
+    border-color: #2A3A52 !important;
+    color: #F1F5F9 !important;
+}
+.Select-menu-outer .VirtualizedSelectFocusedOption {
+    background-color: #2A3A52 !important;
+}
+
+/* Scrollbar dark */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0B0F1A; }
+::-webkit-scrollbar-thumb { background: #2A3A52; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
